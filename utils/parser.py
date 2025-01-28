@@ -73,8 +73,6 @@ class Parser():
             
         return pd.DataFrame(dfdict)
     
-   
-    
     def extract_proteins(self):
         nested_data = []
         for drug in self.et_root.findall("db:drug", self.ns):
@@ -131,3 +129,31 @@ class Parser():
                 })
 
         return pd.DataFrame(nested_data)
+    
+        # Function to extract unique `type` attributes and field data
+    
+    def extract_fields_and_types(self):
+        field_data = {}
+        drug_types = set()
+
+        for drug in self.et_root.findall('db:drug', self.ns):
+            # Collect drug type
+            if 'type' in drug.attrib:
+                drug_types.add(drug.attrib['type'])
+
+            for field in drug:
+                tag = field.tag.split('}')[-1]  # Get the field's local name without namespace
+                if tag not in field_data:
+                    field_data[tag] = []
+                if field.text and field.text.strip():  # Avoid empty or None fields
+                    field_data[tag].append(field.text.strip())
+
+                # Handle nested fields
+                for subfield in field:
+                    subtag = subfield.tag.split('}')[-1]
+                    if subtag not in field_data:
+                        field_data[subtag] = []
+                    if subfield.text and subfield.text.strip():
+                        field_data[subtag].append(subfield.text.strip())
+        
+        return field_data, list(drug_types)
