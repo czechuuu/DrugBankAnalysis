@@ -26,3 +26,11 @@ def get_pathway_id_df(parser: Parser):
     id_no_pathways = id_pathways_df.groupby("id")['pathway-name'].count()
     id_no_pathways.sort_values(ascending=False, inplace=True)
     return id_no_pathways
+
+def get_id_to_synonyms_df(parser: Parser):
+    id_name_df = parser.extract_id_name_df()
+
+    nested_fields = {'synonyms': 'db:synonyms/db:synonym'}
+    id_to_synonyms_df = parser.extract(".", nested_fields=nested_fields, drug_id=None)
+    id_to_synonyms_df = pd.merge(id_name_df, id_to_synonyms_df, on='name', how='inner')
+    return id_to_synonyms_df

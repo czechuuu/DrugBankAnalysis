@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from unittest import mock
-from utils.other import get_pathway_id_df
+from utils.other import get_pathway_id_df, get_id_to_synonyms_df
 
 def test_get_pathway_id_df(mocker):
     # Mock the parser
@@ -86,3 +86,41 @@ def test_get_pathway_id_df_unmatched_drugs(mocker):
     assert len(data) == 2
     assert data.loc["IDAlpha"] == 1
     assert data.loc["IDBeta"] == 0
+
+def test_get_id_to_synonyms_df(mocker):
+    mock_parser = mocker.Mock()
+
+    # Mock parser.extract_id_name_df()
+    mock_id_name_df = pd.DataFrame({
+        "id": ["ID1", "ID2", "ID3"],
+        "name": ["DrugA", "DrugB", "DrugC"]
+    })
+    mock_parser.extract_id_name_df.return_value = mock_id_name_df
+
+    # Mock parser.extract() for synonyms
+    # We must have "name" column to merge on
+    mock_synonyms_df = pd.DataFrame({
+        "name": ["DrugA", "DrugB", "DrugC", "DrugC"],
+        "synonyms": [
+            ["Alpha", "A1"], 
+            ["Bravo"], 
+            ["Charlie"], 
+            ["C2"]
+        ]
+    }).explode("synonyms").reset_index(drop=True)
+    mock_parser.extract.return_value = mock_synonyms_df
+
+    # Run
+    result_df = get_id_to_synonyms_df(mock_parser)
+
+    # Verify calls
+    mock_parser.extract_id_name_df.assert_called_once()
+    mock_parser.extract.assert_called_once_with(".", nested_fields={'synonyms': 'db:synonyms/db:synonym'}, drug_id=None)
+
+    # Check that returned DataFrame merges correctly
+    # Expect columns: ["id", "name", "synonyms"]
+    assert list(result_df.columns) == ["id", "name", "synonyms"]
+    assert len(result_df) == 5  # 2 synonyms for DrugA, 1 for DrugB, 2 for DrugC
+    assert result_df.loc[result_df["name"] == "DrugA", "synonyms"].tolist() == ["Alpha", "A1"]
+    assert result_df.loc[result_df["name"] == "DrugB", "synonyms"].tolist() == ["Bravo"]
+    assert result_df.loc[result_df["name"] == "DrugC", "synonyms"].tolist() == ["Charlie", "C2"]
