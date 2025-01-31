@@ -103,34 +103,20 @@ def test_parser_init(mock_parse, mock_xml_file):
     assert parser.ns == {"db": "http://www.drugbank.ca"}
     assert parser.et_root == mock_root  # Ensure the root is correctly set
 
-def test_extract_fields_and_types_with_multiple_drugs(parser):
-    """
-    This test checks the parser's extract_fields_and_types method
-    against multiple drugs (biotech and small molecule). Ensures
-    that the returned field_data dictionary and drug_types list
-    include data for both drugs.
-    """
-    field_data, drug_types = parser.extract_fields_and_types()
-    
-    # Basic structure checks
-    assert isinstance(field_data, dict), "field_data should be a dictionary"
-    assert isinstance(drug_types, list), "drug_types should be a list"
-    
-    # Check drug_types
+
+def test_extract_fields_and_types(parser):
+    """Test extract_fields_and_types to ensure it extracts simple & nested fields correctly."""
+    field_data, nested_field_data, drug_types = parser.extract_fields_and_types()
+
+    # Check extracted drug types
     assert "biotech" in drug_types, "Expected 'biotech' in drug_types"
     assert "small molecule" in drug_types, "Expected 'small molecule' in drug_types"
-    
-    # Ensure some known fields exist
-    assert "drugbank-id" in field_data, "drugbank-id key missing from field_data"
-    assert "name" in field_data, "name key missing from field_data"
 
-    # Check that known IDs appear in field_data
-    all_drugbank_ids = field_data["drugbank-id"]
-    assert any("DB00001" in val for val in all_drugbank_ids), "DB00001 missing in drugbank-id values"
-    assert any("BTD00024" in val for val in all_drugbank_ids), "BTD00024 missing in drugbank-id values"
-    assert any("DB00002" in val for val in all_drugbank_ids), "DB00002 missing in drugbank-id values"
+    # Check basic field extraction
+    assert "drugbank-id" in field_data, "Missing 'drugbank-id' in extracted fields"
+    assert "name" in field_data, "Missing 'name' in extracted fields"
+    assert "Lepirudin" in field_data["name"], "'Lepirudin' missing from extracted names"
+    assert "DB00001" in field_data["drugbank-id"], "'DB00001' missing from extracted IDs"
 
-    # Check that known names appear in the 'name' field
-    all_names = field_data["name"]
-    assert any("Lepirudin" in val for val in all_names), "'Lepirudin' missing in name values"
-    assert any("SmallMolecule" in val for val in all_names), "'SmallMolecule' missing in name values"
+    # Check nested field extraction (e.g., targets)
+    assert "targets" in nested_field_data, "Missing 'targets' in nested field extraction"

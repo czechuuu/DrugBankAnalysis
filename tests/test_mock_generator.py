@@ -57,7 +57,7 @@ def test_generate_mock_drugs():
     mock_root = ET.Element("drugbank")
     field_data = {"name": ["DrugA", "DrugB"], "description": ["DescA", "DescB"]}
     drug_types = ["biotech", "small molecule"]
-    generate_mock_drugs(mock_root, 2, field_data, drug_types)
+    generate_mock_drugs(mock_root, 2, field_data, {}, drug_types)
     drugs = mock_root.findall("drug")
     assert len(drugs) == 2
     assert any("MOCK00001" in d.find("drugbank-id").text for d in drugs)

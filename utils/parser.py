@@ -133,7 +133,8 @@ class Parser():
         # Function to extract unique `type` attributes and field data
     
     def extract_fields_and_types(self):
-        field_data = {}
+        field_data = {}  # Stores simple fields
+        nested_field_data = {}  # Stores all nested fields
         drug_types = set()
 
         for drug in self.et_root.findall('db:drug', self.ns):
@@ -141,19 +142,30 @@ class Parser():
             if 'type' in drug.attrib:
                 drug_types.add(drug.attrib['type'])
 
+            # Extract fields dynamically, handling nested structures
             for field in drug:
-                tag = field.tag.split('}')[-1]  # Get the field's local name without namespace
-                if tag not in field_data:
-                    field_data[tag] = []
-                if field.text and field.text.strip():  # Avoid empty or None fields
-                    field_data[tag].append(field.text.strip())
+                tag = field.tag.split('}')[-1]
 
-                # Handle nested fields
-                for subfield in field:
-                    subtag = subfield.tag.split('}')[-1]
-                    if subtag not in field_data:
-                        field_data[subtag] = []
-                    if subfield.text and subfield.text.strip():
-                        field_data[subtag].append(subfield.text.strip())
-        
-        return field_data, list(drug_types)
+                if list(field):  # If the field has nested elements, process recursively
+                    nested_field_data.setdefault(tag, []).append(self._extract_nested_field(field))
+                else:  # Otherwise, treat it as a simple field
+                    if field.text and field.text.strip():
+                        field_data.setdefault(tag, []).append(field.text.strip())
+
+        return field_data, nested_field_data, list(drug_types)
+
+
+    def _extract_nested_field(self, element):
+        """Recursively extracts nested field data"""
+        nested_data = {}
+
+        for subfield in element:
+            subtag = subfield.tag.split('}')[-1]
+
+            if list(subfield):  # If there are further nested elements, recurse
+                nested_data.setdefault(subtag, []).append(self._extract_nested_field(subfield))
+            else:  # Otherwise, just store the text value
+                if subfield.text and subfield.text.strip():
+                    nested_data.setdefault(subtag, []).append(subfield.text.strip())
+
+        return nested_data
